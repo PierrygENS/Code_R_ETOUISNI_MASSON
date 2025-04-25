@@ -1,0 +1,141 @@
+---
+title: "Données_bis_bis_svs"
+author: "Pierryg"
+date: "2025-04-25"
+output: html_document
+---
+```{r}
+library(dplyr)
+library(ggpubr)
+library(rstatix)
+library(coin)
+library(ggplot2)
+library(lubridate)
+library(hms)
+library(readxl)
+library(effsize)
+library(emmeans)
+
+#Création du data frame
+
+df_full_2 <- data.frame(
+  ID = c("SoR19", "MaN25", "MaN25", "LaR18", "LaR18", "GuD19", "SoR19", "SoR19", "GuD19", "GuD19", "TaN25", "TaN25", "PiN19", "PiN19", "TaN25", "PaN23", "MaN23", "MaN23", "PiN19"), 
+  Diff_La = c(5.4, 2.5, 3.3, 7.0, 4.4, 9.9, 5.1,-0.6, 1, 8.2, 2.2, 5.9, 4.0, 7.4, 8.4, 4.4, 11.6, 6.4, 16.6),
+  Surface = c(6, 6, 6, 6, 6, 6, 8, 8, 8, 8, 6, 6, 6, 6, 8, 8, 8, 8, 8),
+  attaques = c(10, 12, 18, 10, 10, 1, 5, 7, 4, 6, 7, 6, 10, 10, 9, 10, 14, 12, 14),
+  Tps_HI = c( 64.8, 64.8, 68.4, 79.9, 70.7, 70.7, 53.7, 64.6, 56.1, 61.8, 74.2, 72.9, 68.3, 64.4, 71.3, 72.7, 68.8, 74.5, 68.8),
+  Poids = c("Legers", "Legers", "Legers", "Legers", "Legers", "Legers", "Legers", "Legers", "Legers", "Legers", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds")
+)
+
+df_full_2$Surface <- as.factor(df_full_2$Surface)
+df_full_2$Poids <- as.factor(df_full_2$Poids)
+df_full_2$ID <- as.factor(df_full_2$ID)
+
+print(df_full_2)
+
+
+```
+
+```{r}
+
+#vérification de la normalité
+#Q-Qplot attaques
+qqnorm(df_full_2$attaques, main="Q-Q Plot : attaques") 
+qqline(df_full_2$attaques) 
+#Visuellement, la distribution est normale
+
+#Shapiro attaques
+shapiro.test(df_full_2$attaques)
+#p = 0.8204 > 0.05
+
+#########################
+
+#Q-Qplot Tps_HI
+qqnorm(df_full_2$Tps_HI, main="Q-Q Plot : Tps_HI")
+qqline(df_full_2$Tps_HI)
+#Visuellement, la distribution est normale
+
+#Shapiro Tps_HI
+shapiro.test(df_full_2$Tps_HI)
+#p = 0.5089 > 0.05
+
+#################
+
+#Q-Qplot Diff_La
+qqnorm(df_full_2$Diff_La, main="Q-Q Plot : différence de lactatémie AC-PC")  
+qqline(df_full_2$Diff_La) 
+#Visuellement, la distribution est normale
+
+#Shapiro Diff_La
+shapiro.test(df_full_2$Diff_La)
+#p = 0.4715 > 0.05
+
+ 
+
+```
+
+
+```{r}
+
+#Visualisation de la relation
+
+ggplot(df_full_2, aes(x=Diff_La, y=attaques)) +
+  geom_point(color="blue", size=2) +
+  labs(title="Relation entre la différence de lactatémie AC - PC et le nombre d'attaques",
+       x="Lactatémie (mmol.L-1)",
+       y="Attaques") +
+  theme_bw()
+
+ggplot(df_full_2, aes(x=Diff_La, y=Tps_HI)) +
+  geom_point(color="blue", size=2) +
+  labs(title="Relation entre la différence de lactatémie AC - PC et le temps passé à HI",
+       x="Lactatémie (mmol.L-1)",
+       y="Temps passé à HI (en %)") +
+  theme_bw()
+
+ggplot(df_full_2, aes(x=attaques, y=Tps_HI)) +
+  geom_point(color="blue", size=2) +
+  labs(title="Relation entre le nombre d'attaques et le temps passé à HI",
+       x="Attaques",
+       y="Temps passé à HI (en %)") +
+  theme_bw()
+
+
+```
+```{r}
+#Corrélation de Pearson
+
+
+#tests de corrélation 
+
+cor.test(df_full_2$attaques, df_full_2$Diff_La, method = "pearson")
+#r(17) = 0.19, p = 0.419, IC à 95 % [−0.28, 0.59]. Pas de lien linéaire détecté, légère tendance de relation positive.
+
+cor.test(df_full_2$Tps_HI, df_full_2$Diff_La, method = "pearson")
+#r(17) = 0.21, p = 0.377, IC à 95 % [−0.26, 0.60]. Pas de lien linéaire détecté, légère tendance de relation positive.
+
+cor.test(df_full_2$Tps_HI, df_full_2$attaques, method = "pearson")
+#r(17) = 0.28, p = 0.243, IC à 95 % [−0.19, 0.65]. Pas de lien linéaire détecté, légère tendance de relation positive.
+
+############
+
+#Calcul du coefficient de corrélation r²
+
+print(cor.test(df_full_2$attaques, df_full_2$Diff_La, method = "pearson")$estimate[["cor"]]^2) 
+#R² est environ de 0.038. 3.8% de la variance de "diff_la" est liée à la variance de "attaques"
+
+print(cor.test(df_full_2$Tps_HI, df_full_2$Diff_La, method = "pearson")$estimate[["cor"]]^2)
+#R² est environ de 0.045. 4.5% de la variance de tps_HI est liée à la variance de "diff_La"
+
+print(cor.test(df_full_2$Tps_HI, df_full_2$attaques, method = "pearson")$estimate[["cor"]]^2)
+#R² est environ de 0.079. 7.9% de la variance de "attaques" est liée à la variance de "tps_HI"
+
+
+####################Résultats###################
+
+#Un test de corrélation de Pearson a révélé une légère relation à tendance positive entre la différence de La AC - PC et le temps passé à HI, r(17) = 0.21, p = 0.377, IC à 95 % [−0.26, 0.60]. R² est environ de 0.045. 4.5% de la variance de de la différence de AC - PC de La est liée à la variance du temps passé à HI.
+
+#Un test de corrélation de Pearson a révélé une légère relation à tendance positive entre la différence de La AC - PC et le nombre d'attaques, r(17) = 0.19, p = 0.419, IC à 95 % [−0.28, 0.59]. R² est environ de 0.038. 3.8% de la variance de la différence AC - PC de La est liée à la variance du nombre d'attaques.
+
+```
+

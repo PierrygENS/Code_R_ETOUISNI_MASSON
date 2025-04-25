@@ -1,0 +1,173 @@
+---
+title: "DOnnée s2"
+author: "Pierryg"
+date: "2025-04-07"
+output: html_document
+---
+```{r}
+
+
+library(dplyr)
+library(ggpubr)
+library(rstatix)
+library(coin)
+library(ggplot2)
+library(lubridate)
+library(hms)
+library(readxl)
+library(knitr)
+library(car)
+library(emmeans)
+
+#Construction du dataframe
+
+df_full <- data.frame(
+  ID = c("SoR19", "MaN25", "MaN25", "LaR18", "LaR18", "GuD19", "SoR19", "SoR19", "GuD19", "GuD19", "TaN25", "TaN25", "PiN19", "PiN19", "TaN25", "PaN23", "MaN23", "MaN23", "PiN19"), 
+  Diff_La = c(5.4, 2.5, 3.3, 7.0, 4.4, 9.9, 5.1,-0.6, 1, 8.2, 2.2, 5.9, 4.0, 7.4, 8.4, 4.4, 11.6, 6.4, 16.6),
+  Surface = c("6x6", "6x6", "6x6", "6x6", "6x6", "6x6", "8x8", "8x8", "8x8", "8x8", "6x6", "6x6", "6x6", "6x6", "8x8", "8x8", "8x8", "8x8", "8x8"),
+  Poids = c("Legers", "Legers", "Legers", "Legers", "Legers", "Legers", "Legers", "Legers", "Legers", "Legers", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds")
+)
+df_full$Surface <- as.factor(df_full$Surface)
+df_full$Poids <- as.factor(df_full$Poids)
+df_full$ID <- as.factor(df_full$ID)
+
+###################################################
+#Création du boxlot 
+ggplot(df_full, aes(y = Diff_La, x = Surface, fill = Poids)) +
+  geom_boxplot()+
+  theme_bw() +
+   labs(
+    title = "Boîte à moustache de la différence \nde lactatémie entre le début et \nla fin du combat selon la surface et la catégorie de poids",
+    x = "Taille de surface (en m)",
+    y = "Lactatémie (en mmmol/L de sang)"
+  )
+
+ggplot(df_full, aes(y = Diff_La, x = Surface, fill = Poids)) +
+  geom_boxplot(outlier.shape = NA, position = position_dodge(width = 0.75)) +  # Boxplot
+  geom_jitter(aes(color = Poids), width = 0.2, alpha = 0.6, shape = 16, size = 2) +  # Points
+  scale_color_manual(values = c("blue", "black")) +  # Couleurs des points
+  stat_summary(fun = median, geom = "text", aes(label = round(..y.., 1)),
+               position = position_dodge(width = 0.75),
+               vjust = -0.5, color = "black", fontface = "bold") + # Médiannes
+   stat_summary(fun = function(y) quantile(y, 0.75), geom = "text",
+               aes(label = round(..y.., 1)),
+               position = position_dodge(width = 0.35),
+               vjust = -1.7, color = "black", size = 3.5) + #Q3 
+   stat_summary(fun = function(y) quantile(y, 0.25), geom = "text",
+               aes(label = round(..y.., 1)),
+               position = position_dodge(width = 0.35),
+               vjust = 1.7, color = "black", size = 3.5) + #Q1
+   stat_summary(fun = max, geom = "text", aes(label = round(..y.., 1)),
+               position = position_dodge(width = 0.75),
+               vjust = -0.5, color = "darkred", size = 3.5) + #afficher la valeur maximum
+  stat_summary(fun = min, geom = "text", aes(label = round(..y.., 1)),
+               position = position_dodge(width = 0.75),
+               vjust = 1, color = "darkgreen", size = 3.5) + #afficher la valeur minimum
+  theme_bw() +
+  labs(
+    title = "Boîte à moustache de la différence \nde lactatémie entre le début et \nla fin du combat selon la surface et la catégorie de poids",
+    x = "Taille de surface (en m)",
+    y = "Lactatémie (en mmol/L de sang)"
+  )
+
+
+
+
+
+
+
+```
+
+```{r}
+###################################################
+#Vérification visuelle de la normalité des données
+#Q-Q plot 
+ggplot(df_full, aes(sample = Diff_La, color = Poids)) +
+  geom_qq() +  
+  geom_qq_line() +  
+  facet_grid(. ~ Surface) +  
+  labs(title = "Q-Q Plot des differences de [La] selon la surface chez les légers", 
+       x = "Theoretical Quantiles", y = "Sample Quantiles") +  
+  theme_bw()
+
+
+ggqqplot(df_full, "Diff_La", facet.by = "Surface") #Pour une visualisation plus simple du Q-Q plot
+
+```
+
+
+
+
+```{r}
+# Test de Shapiro-Wilk pour chaque groupe de Surface
+library(dplyr)
+
+df_full %>%
+  group_by(Poids, Surface) %>%
+  summarise(
+    p_value = shapiro.test(Diff_La)$p.value,
+    W = shapiro.test(Diff_La)$statistic,
+    n = n(),
+    .groups = "drop"
+  )
+
+
+#Legers	6	p=0.7036749	w=0.9454911	
+#Legers	8	p=0.7146099	w=0.9497588	
+#Lourds	6	p=0.9354772	w=0.9858706	
+#Lourds	8	p=0.7847371	w=0.9566857	
+#En s'aidant du Q-Qplot aussi, nous pouvons conclure à une distribution normale des données de [La] dans chaque catégorie et surface
+
+###################################################################
+
+#Homogénéité des variances
+
+df_full %>% levene_test(Diff_La ~ Surface*Poids)
+#p=0.489. Les variances sont homogènes.
+
+##########################################################
+
+#Anova à 2 facteurs between - échantillons indépendants
+anova_test(Diff_La ~ Poids*Surface, data = df_full)
+#facteur poids, p=0.134 >0.05, ges = 0.143 et F=2.506 > 1 
+# facteur surface, p=0.488 >0.05, ges = 0.033 et F=0.504 < 1 
+# poids-surface, p=0.06 >0.05, ges = 0.208 et F=3.937 > 1 
+#Si F est >1, tend vers une différence entre les groupes
+# L'interaction tend vers la significativité.
+
+# Regrouper par poids et analyser l’effet de la surface
+df_full %>%
+  group_by(Surface) %>%
+  anova_test(dv = Diff_La, between = Poids)
+
+#En 8x8, le poids tend à une significativité sur [La[] (p=0.083, f(1.7)=4.093 et ges =0.369). En 6x6, le poids n'est pas significatif sur [La] (p=0.750, f(1.8) = 0.108, ges=0.013)
+
+# regrouper par surface et analyser l'effet du poids
+df_full %>%
+  group_by(Poids) %>%
+  anova_test(dv = Diff_La, between = Surface)
+
+#######################################################
+
+#Analyse post-hoc : comparaison par paires avec correction de benjamini-hochberg
+# Regrouper par surface et analyser l'effet du poids
+df_full %>%
+  group_by(Surface) %>%
+  emmeans_test(Diff_La~ Poids, p.adjust.method = "BH")
+#Entre légers et lourds en 8x8, p = 0.0232*
+
+#Analyse post-hoc : comparaison par paires avec correction de benjamini-hochberg
+# Regrouper par poids et analyser l'effet de surface
+df_full %>%
+  group_by(Poids) %>%
+  emmeans_test(Diff_La~ Surface, p.adjust.method = "BH")
+
+
+#Entre légers 6 et légers 8, p=0.401, la différence n'est pas significative. Entre lourds 6 et lourds 8, p=0.073, la différence tend vers une significativité.
+
+
+
+
+```
+
+

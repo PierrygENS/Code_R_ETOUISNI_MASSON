@@ -1,0 +1,276 @@
+---
+title: "Données attaques nouveau"
+output: html_document
+date: "2025-04-23"
+---
+
+
+```{r}
+library(dplyr)
+library(ggpubr)
+library(rstatix)
+library(coin)
+library(ggplot2)
+library(lubridate)
+library(hms)
+library(readxl)
+library(effsize)
+library(emmeans)
+
+#Créer les dataframes avec les attaques détaillées pour chaque combat
+
+df_full_attaques <- data.frame(
+  ID = c("Man25", "RoD20", "MaN25", "SoR19", "LaR18", "ClD21", "GuD19", "LaR18", "SoR19", "JoR19", "RoD20", "SoR19", "GuD19", "AnD22", "ClD21", "GuD19", "RoD20", "JoR19", "MaN25", "JoR19", "ClD21", "AnD22", "LaR18", "AnD22", "TaN25", "EnN45", "PaN23", "TaN25","EnN45", "PiN19", "ReD28", "PiN19", "EnR20", "TaN25", "PaN23", "EnR20", "MaN23", "PiN19", "ReD28", "MaN23", "PaN23", "EnN45", "EnN45", "EnR20", "ReD28", "EnN45", "EnN45", "MaN23"), 
+  attaques = c(18, 8, 12, 10, 10, 3, 1, 10, 5, 9, 1, 7, 4, 5, 5, 6, 4, 9, 13, 6, 6, 8, 4, 4, 7, 4, 4, 6, 14, 10, 6, 10, 7, 9, 10, 14, 14, 14, 9, 12, 9, 10, 9, 13, 9, 8, 7, 9),
+  Surface = c(6, 6, 6, 6, 6, 6, 6, 6, 8, 8, 8, 8, 8, 8, 8, 8, 10, 10, 10, 10, 10, 10, 10, 10, 6, 6, 6, 6, 6, 6, 6, 6, 8, 8, 8, 8, 8, 8, 8, 8, 10, 10, 10, 10, 10, 10, 10, 10),
+  Poids = c("Légers", "Légers", "Légers", "Légers", "Légers", "Légers", "Légers", "Légers", "Légers", "Légers", "Légers", "Légers", "Légers", "Légers", "Légers", "Légers", "Légers", "Légers", "Légers", "Légers", "Légers", "Légers", "Légers", "Légers", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds")
+)
+
+
+
+
+df_full_attaques$Surface <- as.factor(df_full_attaques$Surface)
+df_full_attaques$Poids <- as.factor(df_full_attaques$Poids)
+df_full_attaques$ID <- as.factor(df_full_attaques$ID)
+
+str(df_full_attaques)
+
+print(df_full_attaques)
+
+#########################################Idem mais avec les données des vidéos par combat###############################
+
+#Créer les dataframes avec les attaques détaillées pour chaque combat
+
+df_full_temps <- data.frame(
+  ID = c("Man25 vs RoD20", "MaN25 vs SoR19", "LaR18 vs ClD21", "GuD19 vs LaR18", "SoR19 vs JoR19", "RoD20 vs SoR19", "GuD19 vs AnD22", "ClD21 vs GuD19", "RoD20 vs JoR19", "MaN25 vs JoR19", "ClD21 vs AnD22", "LaR18 vs AnD22", "TaN25 vs EnN45", "PaN23 vs TaN25","EnN45 vs PiN19", "ReD28 vs PiN19", "EnR20 vs TaN25", "PaN23 vs EnR20", "MaN23 vs PiN19", "ReD28 vs MaN23", "PaN23 vs EnN45", "EnN45 vs EnR20", "ReD28 vs EnN45", "EnN45 vs MaN23"), 
+  Tps_HI = c(68.4, 64.9, 79.9, 70.7, 53.7, 64.6, 56.1, 61.9, 40.8, 52.1, 66.9, 60.7, 74.2, 72.9, 68.3, 64.4, 71.3, 72.7, 68.6, 74.5, 69.9, 58.7, 58.3, 56.8),
+  Surface = c(6, 6, 6, 6, 8, 8, 8, 8, 10, 10, 10, 10, 6, 6, 6, 6, 8, 8, 8, 8, 10, 10, 10, 10),
+  Poids = c("Légers", "Légers", "Légers", "Légers", "Légers", "Légers", "Légers", "Légers", "Légers", "Légers", "Légers", "Légers", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds", "Lourds")
+)
+
+
+df_full_temps$Surface <- as.factor(df_full_temps$Surface)
+df_full_temps$Poids <- as.factor(df_full_temps$Poids)
+df_full_temps$ID <- as.factor(df_full_temps$ID)
+
+
+df_full_temps$Tps_BI <- 100 - df_full_temps$Tps_HI 
+str(df_full_temps)
+
+print(df_full_temps)
+
+
+
+```
+
+
+```{r}
+#Représentations en boxplot des attaques selon la surface et le poids
+ggplot(df_full_attaques, aes(y = attaques, x = Surface, fill = Poids)) +
+  geom_boxplot()+
+  stat_summary(fun = median, geom = "text", aes(label = round(..y.., 1)),
+               position = position_dodge(width = 0.75),
+               vjust = -0.5, color = "black", fontface = "bold") +  # Médiannes
+   stat_summary(fun = function(y) quantile(y, 0.75), geom = "text",
+               aes(label = round(..y.., 1)),
+               position = position_dodge(width = 0.35),
+               vjust = -1, color = "black", size = 3.5) + #Q3 
+   stat_summary(fun = function(y) quantile(y, 0.25), geom = "text",
+               aes(label = round(..y.., 1)),
+               position = position_dodge(width = 0.35),
+               vjust = 1.5, color = "black", size = 3.5) + #Q1
+     stat_summary(fun = max, geom = "text", aes(label = round(..y.., 1)),
+               position = position_dodge(width = 0.75),
+               vjust = -0.5, color = "darkred", size = 3.5) + #afficher la valeur maximum
+  stat_summary(fun = min, geom = "text", aes(label = round(..y.., 1)),
+               position = position_dodge(width = 0.75),
+               vjust = 1.3, color = "darkgreen", size = 3.5) + #afficher la valeur minimum
+  theme_bw() +
+  labs(
+    title = "Boîte à moustache du nombre d'attaques \nselon la surface et la catégorie de poids",
+    x = "Taille de surface (en m)",
+    y = "Nombre d'attaques"
+  )
+
+######
+
+#Représentations en boxplot du temps passé à haute intensité selon la surface et le poids
+ggplot(df_full_temps, aes(y = Tps_HI, x = Surface, fill = Poids)) +
+  geom_boxplot()+
+  stat_summary(fun = median, geom = "text", aes(label = round(..y.., 1)),
+               position = position_dodge(width = 0.75),
+               vjust = -0.5, color = "black", fontface = "bold") +  # Médiannes
+  stat_summary(fun = function(y) quantile(y, 0.75), geom = "text",
+               aes(label = round(..y.., 1)),
+               position = position_dodge(width = 0.35),
+               vjust = -0.5, color = "black", size = 2.5) + #Q3 
+   stat_summary(fun = function(y) quantile(y, 0.25), geom = "text",
+               aes(label = round(..y.., 1)),
+               position = position_dodge(width = 0.35),
+               vjust = 1.5, color = "black", size = 2.5) + #Q1
+     stat_summary(fun = max, geom = "text", aes(label = round(..y.., 1)),
+               position = position_dodge(width = 0.75),
+               vjust = -0.35, color = "darkred", size = 3.5) + #afficher la valeur maximum
+  stat_summary(fun = min, geom = "text", aes(label = round(..y.., 1)),
+               position = position_dodge(width = 0.75),
+               vjust = 1.3, color = "darkgreen", size = 3.5) + #afficher la valeur minimum
+  theme_bw() +
+  labs(
+    title = "Boîte à moustache du temps passé dans des zones \nà haute intensité selon la surface et la catégorie de poids",
+    x = "Taille de surface (en m)",
+    y = "Temps passé à haute intensité (en %)"
+  )
+
+
+```
+
+```{r}
+#Vérification de la normalité
+#Visualition par Q-Q plot pour les attaques
+ggplot(df_full_attaques, aes(sample = attaques, color = Poids)) +
+  geom_qq() +  
+  geom_qq_line() +  
+  facet_grid(. ~ Surface) + 
+  labs(title = "Q-Q Plot des differences du nombre d'attaques selon la surface et la catégorie de poids", 
+       x = "Theoretical Quantiles", y = "Sample Quantiles") +  
+  theme_bw()
+
+#Visuellement 6x6 légers, 10x10 et 8x8 légers ne semblent pas normalement distribués.
+
+##############
+
+#Visualition Q-Q plot pour les temps à haute intensité
+ggplot(df_full_temps, aes(sample = Tps_HI, color = Poids)) +
+  geom_qq() +  
+  geom_qq_line() +  
+  facet_grid(. ~ Surface) +  
+  labs(title = "Q-Q Plot des differences de attaques passé à haute intensité selon la surface et la catégorie de poids", 
+       x = "Theoretical Quantiles", y = "Sample Quantiles") +  
+  theme_bw()
+
+#visuellement, cela semble normalement distribué, sauf en 6x6 légers et 10x10 lourds
+
+
+```
+
+```{r}
+#Test Shapiro-Wilk pour vérifier la normalité de la distribution des données
+
+#Pour le nombre d'attaques
+
+df_full_attaques %>%
+  group_by(Poids, Surface) %>%
+  summarise(
+    p_value = shapiro.test(attaques)$p.value,
+    W = shapiro.test(attaques)$statistic,
+    n = n(),
+    .groups = "drop"
+  )
+#Légers	6	p=0.582	w=0.9370656	=> normal
+#Légers	8	p=0.698	w=0.949	 => normal
+#Légers	10	p=0.118	w=0.859	 => normal
+#Lourds	6	p=0.310	w=0.903	=> normal
+#Lourds	8	p=0.172	w=0.876	=> normal
+#Lourds	10	p=0.0852	w=0.845	 => normal
+################################################################################
+#Pour le temps à haute intensité
+df_full_temps %>%
+  group_by(Poids, Surface) %>%
+  summarise(
+    p_value = shapiro.test(Tps_HI)$p.value,
+    W = shapiro.test(Tps_HI)$statistic,
+    n = n(),
+    .groups = "drop"
+  )
+#Légers_6	p=0.578, w=0.927 => normal
+#Légers_8	p=0.640,	w=0.937 => normal
+#Légers_10	p=0.882,	w=0.976 => normal
+#Lourds_6	p=0.612,	w=0.933 => normal
+#Lourds_8	p=0.952,	w=0.989 => normal
+#Lourds_10	p=0.0402,	w=0.751	=> légère violation, considéré comme normal
+
+```
+
+```{r}
+#Homogénéité des variances avec le test de Levene
+
+#Attaques
+df_full_attaques %>% levene_test(attaques ~ Surface*Poids)
+#p=0.335, les variances sont homogènes (>0.05)
+
+
+#Temps à HI
+df_full_temps %>% levene_test(Tps_HI ~ Surface*Poids)
+#p=0.239, les variances sont homogènes (>0.05)
+
+#############################################################
+#Anova à 2 facteurs between - échantillons indépendants
+
+#Pour les attaques
+anova_test(attaques ~ Poids*Surface, data = df_full_attaques)
+#facteur poids, p=0.019 <0.05, ges = 0.125 et F=5.975 > 1 
+
+#facteur surface, p=0.964 >0.05, ges = 0.002 et F=0.0964 <1 
+
+#interaction poids-surface, p=0.013<0.05, ges = 0.187 et F=4.815 >1 
+
+#########
+
+#Pour le temsp passé à HI
+anova_test(Tps_HI ~ Poids*Surface, data = df_full_temps)
+#facteur poids, p=0.043 <0.05, ges = 0.209 et F=4.747 
+
+#facteur surface, p=0.005 <0.05, ges = 0.448 et F=7.301 
+
+#interaction surface-poids, p=0.140, ges = 0.196 et F=2.196 
+
+```
+```{r}
+
+#Vérification de la significativité décelée du facteur poids pour les attaques
+
+ df_full_attaques %>%
+group_by(Poids) %>%
+  anova_test(attaques ~ Surface, error = lm(attaques ~ Poids*Surface, data = df_full_attaques))
+
+#Tendance significative de l'effet de la surface sur le nombre d'attaques en fonction du poids chez les légers p =0,086 ; pas chez les lourds p=0,119
+
+############################################################"
+
+#Test post-hoc "emmeans" avec correction de Benjamini-Hochberg 
+
+# Comparaisons par paires de chaque poids sur le nombre d'attaques
+ 
+  df_full_attaques %>%
+group_by(Surface) %>%
+  anova_test(attaques ~ Poids, error = lm(attaques ~ Poids*Surface, data = df_full_attaques))
+  
+  # Différence significative en 8x8 de l'effet du poids sur le nombre d'attaques
+ #############
+df_full_attaques %>%
+  group_by(Surface) %>%
+  emmeans_test(attaques ~ Poids, p.adjust.method = "BH")
+
+#Entre légers et lourds en 8x8, p=0.0009<0.05
+#################
+df_full_attaques %>%
+  group_by(Poids) %>%
+  emmeans_test(attaques ~ Surface, p.adjust.method = "BH")
+#########################################Temps à HI#######################################
+# Comparaisons par paires sur le temps passées à haute intensité
+  
+#En fusionnant les poids
+df_full_temps %>%
+  emmeans_test(Tps_HI ~ Surface, p.adjust.method = "BH")
+
+#Différence significative du temps à HI entre 6x6 et 10x10 en fusionnant les poids p= 0,009
+# Très très légère tendance entre 8x8 et 10x10 p= 0,09
+ 
+#En fusionnant les surfaces
+df_full_temps %>%
+  emmeans_test(Tps_HI ~ Poids, p.adjust.method = "BH")
+
+#Pas de différence significative de l'effet du poids sur le Temps à HI en fusionnant les surfaces. p=0,1
+```
+```
+
