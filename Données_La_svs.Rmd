@@ -1,6 +1,6 @@
 ---
-title: "DOnnée s2"
-author: "Pierryg"
+title: "Données La"
+author: "Pierryg et Faissal"
 date: "2025-04-07"
 output: html_document
 ---
