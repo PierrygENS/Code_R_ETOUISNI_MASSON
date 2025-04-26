@@ -1,6 +1,6 @@
 ---
 title: "Données svs participants"
-author: "Pierryg"
+author: "Pierryg et Faissal"
 date: "2025-04-04"
 output: html_document
 ---
